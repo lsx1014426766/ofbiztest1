@@ -1,0 +1,114 @@
+ofbiz find-by-primary-key
+
+http://tristan1.iteye.com/blog/355120
+
+screen的全局变量
+http://blog.csdn.net/marcsterling/article/details/9201025
+
+     <actions>
+        <script location="component://practice/webapp/practice/WEB-INF/actions/Recommend.groovy"/>
+                <!--  <set type="List" field="ids" from-field="sessionAttributes.ids"/> -->
+                  <!-- <set field="ids"  value="${java:session.getAttribute(&quot;ids2&quot;)}"/> -->
+              <set field="ids" type="List" from-field="idlist"/>
+                <entity-condition list="zbtjList" entity-name="Product">
+                
+                     <condition-expr field-name="productId" operator="in" from-field="ids" />
+                </entity-condition>
+             
+      </actions>
+
+
+	     <screen name="ids">
+     <section>
+        <actions>
+        <script location="component://practice/webapp/practice/WEB-INF/actions/Recommend.groovy"/>
+                <!--  <set type="List" field="ids" from-field="sessionAttributes.ids"/> -->
+                  <!-- <set field="ids"  value="${java:session.getAttribute(&quot;ids2&quot;)}"/> -->
+              <set field="ids" type="List" from-field="idlist" default-value="[o]"/>
+                <entity-condition list="zbtjList" entity-name="Product">
+                
+                     <condition-expr field-name="productId" operator="in" from-field="ids" />
+                </entity-condition>
+             
+      </actions>
+            <widgets>
+                
+               <!--  <container>
+                </container> -->
+                                   <screenlet title="搜索">
+                                   <include-form name="configid" location="component://practice/widget/PracticeForms.xml"/>
+                                   </screenlet>
+                                      <screenlet title="重磅推荐">
+                                         <include-form name="ListYLzbtj" location="component://practice/widget/PracticeForms.xml"/>
+                                      </screenlet>
+                
+            </widgets>
+       </section>
+    </screen>
+
+
+	  <request-map uri="ids">
+	    <event type="java" path="org.ofbiz.test1.Test" invoke="test"></event>
+	    <response name="success" type="view"  value="ids"/>
+	</request-map>
+	<request-map uri="ids3">
+	    <response name="success" type="view"  value="ids"/>
+	</request-map>
+	<!-- View Mappings -->
+  <view-map name="ids" type="screen"
+	    page="component://practice/widget/PracticeScreens.xml#ids"/>
+
+
+	List<String> list = FastList.newInstance();
+		list.add("10000");
+		request.setAttribute("ids",list);
+		//request.getSession().setAttribute("ids2","10000");
+		return "success";
+
+为空的判断逻辑   如果从YL获取的id为空，再向screen传递时也还是需要添加一个数据库不存在的id,以避免页面报空，这样也避免了去花时间研究如果在screen里面
+些非空判断
+
+现在要解决的就是  传递一个分站的id
+
+<form name="ListYLzbtj" type="list" list-name="zbtjList">
+     <field name="productId" title="id值"><display></display></field>
+   </form>
+   <form name="configid"  type="single" target="ids">
+     <field name="configId" title="请输入查询分站id:"><text/></field>
+     <field name="submitButton" title="查询" widget-style="smallSubmit"><submit button-type="button"/></field>
+   </form>
+
+   问题是同样的groovy多走了一次，可否把一个groovy和一个请求绑定？
+
+
+<screen name="FindProduct">
+        <section>
+            <actions>
+                <set field="titleProperty" value="PageTitleFindProduct"/>
+            </actions>
+            <widgets>
+                <decorator-screen name="CommonProductDecorator" location="${parameters.productDecoratorLocation}">
+                    <decorator-section name="body">
+                        <section>
+                            <condition>
+                                <if-service-permission service-name="acctgAgreementPermissionCheck" main-action="VIEW"/>
+                            </condition>
+                            <widgets>
+                                <decorator-screen name="FindScreenDecorator" location="component://common/widget/CommonScreens.xml">
+                                    <decorator-section name="search-options">
+                                        <include-form name="FindProduct" location="component://product/widget/catalog/ProductForms.xml"/>
+                                    </decorator-section>
+                                    <decorator-section name="search-results">
+                                        <include-form name="ListProducts" location="component://product/widget/catalog/ProductForms.xml"/>
+                                    </decorator-section>
+                                </decorator-screen>
+                            </widgets>
+                            <fail-widgets>
+                                <label style="h3">${uiLabelMap.AccountingViewPermissionError}</label>
+                            </fail-widgets>
+                        </section>
+                    </decorator-section>
+                </decorator-screen>
+            </widgets>
+         </section>
+    </screen>
